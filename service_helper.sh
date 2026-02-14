@@ -15,9 +15,36 @@ function service_exists() {
 }
 
 function check_status(){
-    local svc=$1
-    # 2>&1 redirects 'Standard Error' to 'Standard Output' so we can capture it
-    sudo systemctl status $svc 2>&1
+    local service=$1
+    local status_str=""
+    local enable_str=""
+
+    # 1. Check if the service exists first
+    if ! systemctl list-unit-files "$service.service" &>/dev/null; then
+        echo "not_found"
+        return 1
+    fi
+
+    # 2. Check Active Status (Running vs Stopped)
+    # --quiet returns 0 (true) if active, non-zero if inactive/failed
+    if systemctl is-active --quiet "$service"; then
+        status_str="active"
+    else
+        status_str="inactive"
+    fi
+
+    # 3. Check Enabled Status (Startup vs No Startup)
+    # --quiet returns 0 (true) if enabled, non-zero if disabled
+    if systemctl is-enabled --quiet "$service"; then
+        enable_str="enabled"
+    else
+        enable_str="disabled"
+    fi
+
+    # 4. Return the combined string
+    echo "$status_str $enable_str"
+    
+    
 }
 
 function install_service(){
